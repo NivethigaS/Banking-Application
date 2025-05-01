@@ -7,6 +7,7 @@ def register_admin():
             file.write(f"001 | Admin | admin01 | pass@01\n")
         print("Admin Details Created Successfully.")
         print("Admin User ID: 001")
+
     else:
         print("Admin already registered.")    
         print("----------------------------------")
@@ -59,19 +60,32 @@ def admin_login():
 def create_new_customer():
     name = input("Enter Customer Name: ")
     account_number = input("Enter Account Number: ")
-    try:
-        balance = float(input("Enter Initial Balance: "))
-    except ValueError:
-        print("Invalid balance input.")    
-        return
-    
+    balance = float(input("Enter Initial Balance: "))
+    NIC_Number = input("Enter IC number: ")
+    address =input("Enter your address: ")
     username = input("Enter Username: ")
     password = input("Enter Password: ")
+
+    try:
+        with open("user.txt", "r") as file:
+            for line in file:
+                details = line.strip().split(" | ")
+                if len(details) >= 7:
+                    existing_acc = details[2]
+                    existing_username = details[6]
+                    if account_number == existing_acc:
+                        print("Account number already registered!")
+                        return
+                    if username == existing_username:
+                        print("Username already taken!")
+                        return
+    except FileNotFoundError:
+        pass 
 
     user_id = "CUS" + account_number[-3:]
 
     with open("user.txt", "a") as file:
-        file.write(f"{user_id} | {name} | {account_number} | {balance} | {username} | {password}\n")
+        file.write(f"{user_id} | {name} | {account_number} | {NIC_Number} | {address} | {balance} | {username} | {password}\n")
 
     with open("accounts.txt", "a") as file:
         file.write(f"{account_number} | {name} | {balance}\n")
@@ -92,15 +106,15 @@ def customer_login():
     with open("user.txt", "r") as file:
         for line in file:
             details = line.strip().split(" | ")
-            if len(details) >= 6:
-                _, name, acc_no, balance, saved_user, saved_pass = details
+            if len(details) >= 8:
+                user_id, name, acc_no, balance, NIC_Number, address, saved_user, saved_pass = details
                 if username == saved_user and password == saved_pass:
                     print(f"\nWelcome {name}!")
-                    customer_login(acc_no)
+                    customer_menu(acc_no)
                     return
-                
+            
     print("Invalid username or password.")
-
+                    
 
 #=======================DEPOSIT FUNCTON========================================#
 def deposit(account_number):
@@ -119,7 +133,7 @@ def deposit(account_number):
 
     with open("accounts.txt", "r") as file:
         for line in file:
-            acc_no, name, balance = line.strip(). split("|")
+            acc_no, name, balance = line.strip(). split(" | ")
             if acc_no == account_number:
                 balance =float(balance) + amount
                 updated = True
@@ -133,7 +147,7 @@ def deposit(account_number):
         file.write(f"{account_number} | Deposit | {amount}\n")
 
     if updated:
-        print("Deposit Successful!")       
+        print("Deposit Successful!  Your Current Balance is: ", balance )       
 
     else:
         print("Account not found.")        
@@ -143,45 +157,43 @@ def withdraw(account_number):
     try:
         amount = float(input("Enter amount to withdraw: "))
     except ValueError:
-        print("Invalid amount.")
+        print("Invalid amount: ")
         return
         
-    updated = False
-    lines =[]
-
-    if not os.path.exists("accounts.txt"):
-        print("Account file not found.")
-        return
+    found = False
+    updated_lines =[]
 
     with open("accounts.txt", "r") as file:
-        for line in file:
-            acc_no, name, balance = line.strip().split("|")
+        lines = file.readlines()
+
+    for line in lines:
+            acc_no, name, balance = line.strip().split(" | ")
+
             if acc_no == account_number:
+                found = True
                 balance = float(balance)
                 if balance >= amount:
                     balance = balance - amount
-                    updated = True
-                line = f"{acc_no} | {name} | {balance}\n"
+                    line = f"{acc_no} | {name} | {balance}\n"
+                    print("Withdraw Successful! Your Current Balance is: ", balance)
+                    with open("transactions.txt", "a") as file:
+                        file.write(f"{account_number} | Withdraw | {amount}\n")
+                else:
+                    print("Insufficient balance.")    
+            updated_lines.append(line)
+        
+    if found:
+        with open("accounts.txt", "w") as file:
+            file.writelines(updated_lines)
 
-            else:
-                print("Not enough balance!")
-                return
-    
-     lines.append(line)   
-
-    with open("accounts.txt", "w") as file:
-        file.writelines(lines) 
-
-    if updated:
-        with open("transactions.txt", "a") as file:
-            file.write(f"{account_number} | Withdraw | {amount}\n")
-        print("Withdraw Successful!")
+    else:
+        print("Account not found.")        
 
 #======================CHECK BALANCE================================#
 def check_balance(account_number):
-     with open("accounts.txt", "r") as file:
+    with open("accounts.txt", "r") as file:
         for line in file:
-            acc_no, name, balance = line.strip().split("|")
+            acc_no, name, balance = line.strip().split(" | ")
             if acc_no == account_number:
                 print(f"Current balance: {balance}")
                 break
@@ -193,32 +205,49 @@ def view_transactions(account_number):
         print("No transactions found.")
         return
     
-    Found = False
+    found = False
     with open ("transactions.txt", "r") as file:
-        for linr in file:
-            acc_no, t_type, amut = line.strip().split("|")
+        for line in file:
+            acc_no, t_type, amut = line.strip().split(" | ")
             if acc_no == account_number:
-                print(f"{t_type}: {amut}")
-                Found = True
-    if not Found:
-        print("No transactions for this account.")        
+                print(f"{t_type}: {float(amut)}")
+                found = True
+    if not found:
+        print("No transactions for this account.") 
+        return       
 
 #====================================DELETE ACCOUNT======================#
-def delete_account(account_number):
-    if not os.path.exists("accounts.txt"):
-        print("Accounts file not found.")
-        return
+def delete_account(account_number, username, password):
+    found = False
+
+    if os.path.exists("user.txt"):
+        with open("user.txt", "r") as file:
+            users = file.readlines()
     
-    with open("accounts.txt", "r") as file:
-        lines = file.readlines()
+    with open("user.txt", "w") as file:
+        for line in users:
+            details = line.strip().split(" | ")
+            if len(details) >=8:
+                user_id, name, account_no, balance, NIC_Number, address, user_name, pwd = details    
+                if account_no == account_number and user_name == username and pwd == password:
+                    found = True
+                    continue
 
-    with open("accounts.txt", "w") as file:
-        for line in lines:
-            if not line.startswith(account_number):
-                file.write(line)
+            file.write(line)
 
-    print("Account deleted.")
-
+    if found:
+        if os.path.exists("accounts.txt"):
+            with open("accounts.txt", "r") as file:
+                accounts = file.readlines()
+            with open("accounts.txt", "w") as file:
+                for line in accounts:
+                    acc_no, user_name, pwd = line.strip().split(" | ")
+                    if account_no != account_number:
+                        file.write(line)
+        print("Your account has been deleted successfully.")
+    
+    else:
+        print("Account not found.")
 
 #=========================CUSTOMER MENU====================================#
 def customer_menu(account_number):
@@ -246,7 +275,17 @@ def customer_menu(account_number):
             view_transactions(account_number)
 
         elif choice =="5":
-            delete_account(account_number) 
+            print("\nPlease confirm account details to delete.")
+
+            acc_no = input("Enter account number: ")
+            user_name = input("Enter username: ")
+            pwd = input("Enter password: ") 
+
+            if acc_no == account_number:
+                delete_account(acc_no, user_name, pwd)
+            else:
+                print("Account number doesn't match.")    
+            
 
         elif choice =="6":
             break
@@ -295,9 +334,11 @@ def main_menu():
             print("Thank you! for using tha App..")      
             break
         else:
-            print("Invalid choice. Try again.")              
+            print("Invalid choice. Try again.") 
 
-main_menu()            
+main_menu()   
+                     
+            
 
 
 
