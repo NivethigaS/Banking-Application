@@ -1,1 +1,2 @@
-CUS543 | Nive | 9876543 | 123456789 | Jaffna | 10000.0 | nive07 | evin09$
+CUS102 | Thanu | 100102 | 456889 | Colombo | 20000.0 | thanu09 | tn07$
+CUS103 | ladhu | 100103 | 159783 | Jaffna | 40000.0 | ladhu00 | la200
